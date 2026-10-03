@@ -1,3 +1,6 @@
 - [x] Study the official challenge brief and identify the prototype journey.
 - [x] Build demo dataset, global search, interactive graph, evidence inspection, and persona views.
 - [x] Validate the experience at desktop and mobile sizes.
+- [ ] Configure the supplied Bright Data key securely and verify live enrichment for registries, trial sites, and NIH awardees.
+- [ ] Add privacy-conscious clinical intake with HPO extraction, atlas overlay, and ranked exploratory matches.
+- [ ] Verify both new flows in desktop and mobile preview.
