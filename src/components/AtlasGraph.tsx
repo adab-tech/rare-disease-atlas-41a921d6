@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { edges, nodes, type AtlasNode } from '@/lib/atlas-data';
 
 type Point = SimulationNodeDatum & { id: string; x: number; y: number; cluster: string; type: string };
-type Props = { selectedNode: string | null; selectedEdge: string | null; onNode: (id: string) => void; onEdge: (id: string) => void; focusCluster: string | null };
+type Props = { selectedNode: string | null; selectedEdge: string | null; onNode: (id: string) => void; onEdge: (id: string) => void; focusCluster: string | null; phenotypeIds?: string[] };
 const starfield = Array.from({ length: 110 }, (_, i) => ({ x: ((i * 419 + 127) % 1000) - 500, y: ((i * 233 + 59) % 620) - 310, r: i % 11 === 0 ? 1.15 : .55, opacity: i % 7 === 0 ? .48 : .18 }));
 const radius = (node: AtlasNode) => node.type === 'mechanism' ? 13 : node.type === 'disease' ? 10 : node.type === 'gene' ? 6 : node.type === 'organization' ? 5 : 3.7;
 const visibleLabel = (node: AtlasNode, selected: boolean, nearby: boolean) => selected || nearby || ['mechanism','disease'].includes(node.type);
 
-export function AtlasGraph({ selectedNode, selectedEdge, onNode, onEdge, focusCluster }: Props) {
+export function AtlasGraph({ selectedNode, selectedEdge, onNode, onEdge, focusCluster, phenotypeIds = [] }: Props) {
   const [positions, setPositions] = useState<Record<string, {x:number;y:number}>>({});
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
   const [hovered, setHovered] = useState<string | null>(null);
@@ -82,15 +82,15 @@ export function AtlasGraph({ selectedNode, selectedEdge, onNode, onEdge, focusCl
         })}
         {nodes.map(node => {
           const p = positions[node.id]; if (!p) return null;
-          const selected = selectedNode === node.id; const nearby = related.has(node.id); const active = selected || hovered === node.id;
+           const selected = selectedNode === node.id; const nearby = related.has(node.id); const profiled = phenotypeIds.includes(node.id); const active = selected || hovered === node.id || profiled;
           const dim = (!!selectedNode && !nearby) || (!!focusCluster && node.cluster !== focusCluster);
           const r = radius(node);
           return <g key={node.id} transform={`translate(${p.x} ${p.y})`} onClick={() => onNode(node.id)} onMouseEnter={() => setHovered(node.id)} onMouseLeave={() => setHovered(null)} className="cursor-pointer transition-opacity duration-300" opacity={dim ? .2 : 1} role="button" tabIndex={0} aria-label={`Explore ${node.label}`} onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onNode(node.id); } }}>
             <circle r={r * (active ? 3.8 : 2.9)} fill={node.cluster === 'clearance' ? 'var(--clearance)' : 'var(--channel)'} opacity={active ? .25 : .13} filter="url(#star-glow)" />
-            <circle r={r + (active ? 9 : 5)} fill="none" stroke={node.cluster === 'clearance' ? 'var(--clearance)' : 'var(--channel)'} opacity={active ? .6 : node.type === 'disease' || node.type === 'mechanism' ? .16 : 0} strokeWidth=".6" />
+             <circle r={r + (active ? 9 : 5)} fill="none" stroke={profiled ? 'var(--starlight)' : node.cluster === 'clearance' ? 'var(--clearance)' : 'var(--channel)'} opacity={active ? .8 : node.type === 'disease' || node.type === 'mechanism' ? .16 : 0} strokeWidth={profiled ? 1.8 : .6} strokeDasharray={profiled ? '3 2' : undefined} />
             <circle r={r} fill={node.cluster === 'clearance' ? 'var(--clearance)' : 'var(--channel)'} stroke={active ? 'var(--starlight)' : 'none'} strokeWidth="1.5" />
             <circle r="18" fill="transparent" />
-            {visibleLabel(node, selected, nearby || hovered === node.id) && <text x={r + 10} y="4" fill={selected ? 'var(--starlight)' : 'var(--graph-label)'} fontSize={node.type === 'disease' || node.type === 'mechanism' ? 12 : 10} fontWeight={selected ? 600 : 400} className="pointer-events-none select-none">{node.label}</text>}
+             {(profiled || visibleLabel(node, selected, nearby || hovered === node.id)) && <text x={r + 10} y="4" fill={selected || profiled ? 'var(--starlight)' : 'var(--graph-label)'} fontSize={node.type === 'disease' || node.type === 'mechanism' ? 12 : 10} fontWeight={selected || profiled ? 600 : 400} className="pointer-events-none select-none">{node.label}</text>}
           </g>;
         })}
       </g>
