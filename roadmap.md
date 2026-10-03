@@ -1,0 +1,3 @@
+- [x] Study the official challenge brief and identify the prototype journey.
+- [ ] Build demo dataset, global search, interactive graph, evidence inspection, and persona views.
+- [ ] Validate the experience at desktop and mobile sizes.
