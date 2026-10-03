@@ -1,3 +1,4 @@
+import { repurposingMarkdown } from './repurposing';
 import { edges, getNode, nodes, type AtlasNode, type Cluster } from '@/lib/atlas-data';
 
 export type DisputeKind = 'Variant pathogenicity' | 'Trial endpoint' | 'Preprint vs peer-reviewed' | 'Mechanism direction';
@@ -37,7 +38,8 @@ export function scopeNodes(scope: DossierScope): Set<string> {
   return new Set([scope.id]);
 }
 
-export function buildDossier(scope: DossierScope): string {
+export function buildDossier(scope: DossierScope, compoundIds: string[] = []): string {
+  const rp = repurposingMarkdown(compoundIds);
   const core = scopeNodes(scope);
   const ring = new Set(core); edges.forEach(e => { if (core.has(e.source)) ring.add(e.target); if (core.has(e.target)) ring.add(e.source); });
   const pick = (t: AtlasNode['type']) => [...new Set([...nodes.filter(n => ring.has(n.id) && n.type === t), ...related(ring, t)])];
@@ -45,7 +47,7 @@ export function buildDossier(scope: DossierScope): string {
   const scoped = edges.filter(e => ring.has(e.source) && ring.has(e.target));
   const conflicts = disputes.filter(d => scoped.some(e => e.id === d.edgeId));
   const gaps = frontierGaps.filter(g => g.nodeIds.some(id => ring.has(id)));
-  const cites = [...new Set(scoped.map(e => e.sourceRef).concat(conflicts.flatMap(d => d.refs)))];
+  const cites = [...new Set(scoped.map(e => e.sourceRef).concat(conflicts.flatMap(d => d.refs), rp.citations))];
   const line = (n: AtlasNode) => `- **${n.label}** (${n.source ?? 'demo record'}) — ${n.description}`;
   const date = new Date().toISOString().slice(0, 10);
   return [
@@ -60,7 +62,7 @@ export function buildDossier(scope: DossierScope): string {
     '## 2. Conditions in scope', ...(diseases.length ? diseases.map(line) : ['- None directly in scope.']),
     '', '## 3. Target genes', ...(genes.length ? genes.map(line) : ['- None identified in this slice.']),
     '', '## 4. Mechanistic hypotheses',
-    ...(mechs.length ? mechs.map((m, i) => `${i + 1}. **H${i + 1}:** Dysfunction in *${m.label.toLowerCase()}* contributes to shared features across ${diseases.map(d => d.label).join(', ') || 'the scoped conditions'}. ${m.description}`) : ['- No mechanism in scope.']),
+    ...(mechs.length ? mechs.map((m, i) => `${i + 1}. **H${i + 1}:** Dysfunction in *${m.label.toLowerCase()}* contributes to shared features across ${diseases.map(d => d.label).join(', ') || 'the scoped conditions'}. ${m.description}`) : ['- No mechanism in scope.']), ...rp.hypotheses,
     '', '## 5. Evidentiary conflicts',
     ...(conflicts.length ? conflicts.map(d => `- **${d.kind}** (${d.severity}): ${d.summary}\n  - Position A: ${d.sideA}\n  - Position B: ${d.sideB}\n  - Sources: ${d.refs.join('; ')}`) : ['- No conflicts recorded in this demo slice. This is not an exhaustive literature review.']),
     '', '## 6. Consensus gaps and proposed experiments',
