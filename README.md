@@ -19,7 +19,9 @@ Open the local URL printed by Vite. `bun run build` produces a production build.
 
 - **TanStack Start / React / TypeScript:** the home route contains search, a context-sensitive evidence inspector, and Maria, Devon, Priya, and Dr. Osei views.
 - **SVG + d3-force:** the interactive map lays out nodes with a force simulation; users can select nodes or relationships, drag to pan, scroll or use controls to zoom, and switch pathway focus.
-- **Local typed data:** `src/lib/atlas-data.ts` defines every node, edge, synonym, source reference, confidence estimate, evidence status, and caveat. Search normalizes case, punctuation, and accents and matches labels and aliases. No external service or database is needed.
+- **Local typed data:** `src/lib/atlas-data.ts` defines every demo node, edge, synonym, source reference, confidence estimate, evidence status, and caveat. Search normalizes case, punctuation, and accents and matches labels and aliases. The base atlas works without an external service or database.
+- **Clinical intake:** `src/lib/clinical-intake.ts` recognizes four HPO-linked demo phenotypes (ataxia, splenomegaly, seizures, developmental delay), marks simple negation, and ranks diseases by transparent feature overlap. Input is parsed locally in the browser, not stored or sent to an AI service. Remove identifying details before use. The score is **not** a diagnostic probability; unrecognized symptoms and diseases outside the small demo graph cannot be assessed.
+- **Research signals:** `src/lib/bright-data.functions.ts` runs Bright Data on the server to inspect patient-organization pages for registry links when `BRIGHT_DATA_API_KEY` is configured. It also queries the ClinicalTrials.gov v2 and NIH RePORTER official APIs for current study records, sites, grant projects, and investigators. ClinicalTrials.gov may block Bright Data, so its official API is used directly when necessary; NIH RePORTER's POST API is queried directly. Every result distinguishes a Bright Data live page, a live official feed, or a curated unverified fallback. No credentials or pasted clinical notes are sent to these services.
 - **Styling:** semantic color tokens live in `src/styles.css`. The two pathway colors distinguish clusters; confidence and uncertainty use separate signals.
 
 ## Reproduce the dataset
@@ -30,4 +32,4 @@ Some OMIM and HPO identifiers refer to established disease/gene/phenotype concep
 
 ## What is not connected yet
 
-No live APIs, AI extraction, persistent search history, authenticated contribution, or automated evidence reconciliation. Before using the atlas for real decisions, replace illustrative references with verified source records, verify each study’s status and eligibility, review contradictory literature, and confirm data reuse and researcher participation with their owners.
+No broad clinical NLP, persistent search history, authenticated contribution, or automated evidence reconciliation. Live research results are separate from the illustrative graph, not automatically added as graph evidence. Before using the atlas for real decisions, replace illustrative references with verified source records, verify each study’s status and eligibility, review contradictory literature, and confirm data reuse and researcher participation with their owners.

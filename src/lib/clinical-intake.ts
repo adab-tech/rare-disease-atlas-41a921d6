@@ -21,7 +21,9 @@ export function parseClinicalNote(note: string): Finding[] {
       if (!node) continue;
       const position = sentence.toLowerCase().indexOf(phrase);
       const prefix = sentence.slice(Math.max(0, position - 38), position);
-      const negated = negative.test(prefix) || (negative.test(sentence) && !sentence.includes(','));
+      // A negation after the term or in an earlier comma/contrast clause does not negate it.
+      const clause = prefix.split(/,|\b(?:but|however|although)\b/i).at(-1) ?? '';
+      const negated = negative.test(clause);
       const previous = found.get(id);
       if (!previous || (previous.negated && !negated)) found.set(id, { id, label: node.label, hpo: node.subtitle, phrase, negated });
     }
