@@ -3,6 +3,7 @@ import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, f
 import { LocateFixed, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { edges, nodes, type AtlasNode } from '@/lib/atlas-data';
+import { disputeByEdge } from '@/lib/frontier';
 
 type Point = SimulationNodeDatum & { id: string; x: number; y: number; cluster: string; type: string };
 type Props = { selectedNode: string | null; selectedEdge: string | null; onNode: (id: string) => void; onEdge: (id: string) => void; focusCluster: string | null; phenotypeIds?: string[] };
@@ -76,8 +77,8 @@ export function AtlasGraph({ selectedNode, selectedEdge, onNode, onEdge, focusCl
           const active = selectedEdge === edge.id || (!!selectedNode && (edge.source === selectedNode || edge.target === selectedNode));
           const muted = (!!selectedNode && !active) || (!!focusCluster && (nodes.find(n => n.id === edge.source)?.cluster !== focusCluster || nodes.find(n => n.id === edge.target)?.cluster !== focusCluster));
           return <g key={edge.id} className="cursor-pointer" onClick={() => onEdge(edge.id)}>
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={active ? 'var(--starlight)' : 'var(--graph-line)'} strokeWidth={active ? 1.5 : .7} opacity={muted ? .1 : active ? .85 : .38} strokeDasharray={edge.status === 'Inferred' ? '3 4' : undefined} className="pointer-events-none transition-opacity duration-300" />
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth="11" aria-label={`${nodes.find(n => n.id === edge.source)?.label} ${edge.relation} ${nodes.find(n => n.id === edge.target)?.label}`}><title>{edge.relation} · {edge.confidence.toFixed(2)} confidence</title></line>
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={disputeByEdge[edge.id] ? 'var(--warning)' : active ? 'var(--starlight)' : 'var(--graph-line)'} strokeWidth={active ? 1.5 : disputeByEdge[edge.id] ? 1.1 : .7} opacity={muted ? .1 : active ? .85 : disputeByEdge[edge.id] ? .7 : .38} strokeDasharray={edge.status === 'Inferred' ? '3 4' : undefined} className="pointer-events-none transition-opacity duration-300" />
+            {disputeByEdge[edge.id] && <g transform={`translate(${(a.x+b.x)/2} ${(a.y+b.y)/2})`} className="pointer-events-none" opacity={muted ? .15 : 1}><circle r="6" fill="var(--skyfield)" stroke="var(--warning)" strokeWidth="1"/><text y="3" textAnchor="middle" fontSize="8" fontWeight="700" fill="var(--warning)">!</text></g>}<line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth="11" aria-label={`${nodes.find(n => n.id === edge.source)?.label} ${edge.relation} ${nodes.find(n => n.id === edge.target)?.label}`}><title>{edge.relation} · {edge.confidence.toFixed(2)} confidence{disputeByEdge[edge.id] ? ' · contested evidence' : ''}</title></line>
           </g>;
         })}
         {nodes.map(node => {
