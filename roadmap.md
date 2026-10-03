@@ -4,4 +4,4 @@
 - [x] Configure the supplied Bright Data key securely and verify live enrichment for registries, trial sites, and NIH awardees.
 - [x] Add privacy-conscious clinical intake with HPO extraction, atlas overlay, and ranked exploratory matches.
 - [x] Verify both new flows in desktop and mobile preview.
-- [ ] Expand Research Grounding with the 14-source audit and clearly labeled production roadmap; verify desktop and mobile dialog.
+- [x] Expand Research Grounding with the 14-source audit and clearly labeled production roadmap; verify desktop and mobile dialog.
