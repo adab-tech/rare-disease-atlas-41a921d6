@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep the Constellation prototype's illustrative biomedical entities and relationships in a local typed data module; this makes demo claims auditable and avoids implying a live evidence feed.
+- Render the knowledge atlas as an SVG driven by d3-force; this keeps pan, zoom, selection, and semantic interaction lightweight and inspectable.
