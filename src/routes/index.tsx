@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, CircleHelp, Command, Compass, Dna, ExternalLink, FlaskConical, Focus, GitBranch, Info, Layers3, Search, Sparkles, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AtlasGraph } from '@/components/AtlasGraph';
-import { edges, nodeById, nodes, normalize, searchNodes, type AtlasEdge, type AtlasNode, type Cluster, type NodeType, typeLabel } from '@/lib/atlas-data';
+import { edges, getNode, nodes, normalize, searchNodes, type AtlasEdge, type AtlasNode, type Cluster, type NodeType, typeLabel } from '@/lib/atlas-data';
 
 export const Route = createFileRoute('/')({
   head: () => ({ meta: [
@@ -47,10 +47,10 @@ function Index() {
   const searchRef = useRef<HTMLInputElement>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const results = useMemo(() => searchNodes(query), [query]);
-  const selected = selectedNode ? nodeById[selectedNode] : null;
+  const selected = selectedNode ? getNode(selectedNode) : null;
   const edge = selectedEdge ? edges.find(item => item.id === selectedEdge) : undefined;
   const relatedEdges = selected ? edges.filter(item => item.source === selected.id || item.target === selected.id) : [];
-  const relatedNodes = relatedEdges.map(item => ({ edge:item, node:nodeById[item.source === selected?.id ? item.target : item.source] })).filter(item => item.node).sort((a,b) => b.edge.confidence - a.edge.confidence);
+  const relatedNodes = relatedEdges.map(item => ({ edge:item, node:getNode(item.source === selected?.id ? item.target : item.source) })).sort((a,b) => b.edge.confidence - a.edge.confidence);
   const filteredNodes = nodes.filter(node => filter === 'all' || node.type === filter);
 
   useEffect(() => {
@@ -67,12 +67,12 @@ function Index() {
 
   const selectNode = (id: string, alias?: string) => {
     setSelectedNode(id); setSelectedEdge(null); setCluster(null); setSearchOpen(false); setMobileTab('insight');
-    setSearchAlias(alias && normalize(alias) !== normalize(nodeById[id].label) ? alias : null);
+    setSearchAlias(alias && normalize(alias) !== normalize(getNode(id).label) ? alias : null);
   };
   const selectEdge = (id: string) => { setSelectedEdge(id); setSelectedNode(null); setSearchAlias(null); setMobileTab('insight'); };
-  const doSearch = () => { if (results.length) selectNode(results[0].node.id, results[0].matched); };
+  const doSearch = () => { const first = results[0]; if (first) selectNode(first.node.id, first.matched); };
   const reset = () => { setSelectedNode(null); setSelectedEdge(null); setCluster(null); setQuery(''); setSearchAlias(null); setMobileTab('map'); };
-  const currentPersona = personas.find(p => p.id === persona) ?? personas[0];
+  const currentPersona = personas.find(p => p.id === persona) ?? { id: 'maria' as const, name: 'Maria', role: 'Patient leader' };
   const viewTitle = persona === 'maria' ? 'Pathway navigator' : persona === 'devon' ? 'Where to start' : persona === 'priya' ? 'Opportunity signals' : 'Collaborator explorer';
 
   return <main className="min-h-screen bg-background text-foreground">
@@ -95,7 +95,7 @@ function Index() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-4"><div className="flex items-center gap-3"><span className="flex size-7 items-center justify-center border border-primary/30 text-primary"><GitBranch className="size-3.5"/></span><span className="text-xs font-medium text-foreground">Atlas overview</span><span className="hidden text-muted-foreground sm:inline">/</span><span className="hidden text-xs text-muted-foreground sm:inline">{selected ? selected.label : edge ? `${nodeById[edge.source].label} → ${nodeById[edge.target].label}` : 'Two pathways, one connected map'}</span></div><div className="flex items-center gap-3 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-signal"/> {nodes.length} entities <span className="text-border">·</span> {edges.length} relationships <span className="hidden text-border sm:inline">·</span><span className="hidden sm:inline">Demo dataset</span></div></div>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-4"><div className="flex items-center gap-3"><span className="flex size-7 items-center justify-center border border-primary/30 text-primary"><GitBranch className="size-3.5"/></span><span className="text-xs font-medium text-foreground">Atlas overview</span><span className="hidden text-muted-foreground sm:inline">/</span><span className="hidden text-xs text-muted-foreground sm:inline">{selected ? selected.label : edge ? `${getNode(edge.source).label} → ${getNode(edge.target).label}` : 'Two pathways, one connected map'}</span></div><div className="flex items-center gap-3 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-signal"/> {nodes.length} entities <span className="text-border">·</span> {edges.length} relationships <span className="hidden text-border sm:inline">·</span><span className="hidden sm:inline">Demo dataset</span></div></div>
 
       <div className="grid grid-cols-2 border-b border-border md:hidden"><button className={`py-3 text-xs font-medium ${mobileTab === 'map' ? 'border-b-2 border-primary text-foreground':'text-muted-foreground'}`} onClick={() => setMobileTab('map')}>Map</button><button className={`py-3 text-xs font-medium ${mobileTab === 'insight' ? 'border-b-2 border-primary text-foreground':'text-muted-foreground'}`} onClick={() => setMobileTab('insight')}>Insights & evidence</button></div>
       <div className="grid min-h-[640px] border-b border-border lg:grid-cols-[minmax(0,1fr)_355px] xl:grid-cols-[minmax(0,1fr)_390px]">
@@ -120,7 +120,7 @@ function Confidence({value}:{value:number}) { return <span className={`font-mono
 function Source({reference}:{reference:string}) { const url = sourceLink(reference); return url ? <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary">{reference}<ExternalLink className="size-3"/></a> : <span>{reference}</span>; }
 
 function EdgePanel({edge,onBack,onNode}:{edge:AtlasEdge;onBack:()=>void;onNode:(id:string)=>void}) {
-  const source = nodeById[edge.source], target = nodeById[edge.target];
+  const source = getNode(edge.source), target = getNode(edge.target);
   return <div className="animate-rise"><Button variant="ghost" className="mb-6 h-7 px-0 text-[11px] text-muted-foreground hover:bg-transparent hover:text-primary" onClick={onBack}>← Back to overview</Button><SectionLabel index="01">Relationship evidence</SectionLabel><div className="flex items-center gap-3 text-xs"><span className={`size-2 rounded-full ${source.cluster === 'clearance'?'bg-clearance':'bg-channel'}`}/><span>{typeLabel[source.type]} → {typeLabel[target.type]}</span></div><h2 className="mt-4 font-display text-[30px] leading-[1.15]">{source.label} <span className="text-primary">{edge.relation}</span> {target.label}</h2><p className="mt-5 text-sm leading-relaxed text-muted-foreground">{edge.explanation}</p><div className="mt-7 grid grid-cols-2 gap-px border border-border bg-border"><div className="bg-background p-4"><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Confidence</span><div className="mt-2 text-lg"><Confidence value={edge.confidence}/><span className="ml-1 text-xs text-muted-foreground">/ 1.00</span></div></div><div className="bg-background p-4"><span className="block text-[10px] uppercase tracking-wider text-muted-foreground">Evidence type</span><span className="mt-2 block text-sm text-foreground">{edge.status}</span></div></div><div className="mt-7"><SectionLabel index="02">Trace the source</SectionLabel><p className="text-xs text-muted-foreground"><Source reference={edge.sourceRef}/></p>{edge.sourceRef.includes('(demo)') && <p className="mt-2 text-[11px] text-warning">Illustrative identifier — not a verified publication or trial record.</p>}</div><div className="mt-7"><SectionLabel index="03">What remains uncertain</SectionLabel><p className="text-xs leading-relaxed text-muted-foreground">{edge.caveat ?? (edge.status === 'Inferred' ? 'This is a research hypothesis, not a confirmed clinical connection. It needs independent validation.' : 'No specific contradictory finding is recorded in this demo slice. That does not mean the literature has been exhaustively reviewed.')}</p></div><div className="mt-8 space-y-2 border-t border-border pt-5">{[source,target].map(node => <Button key={node.id} variant="ghost" className="flex h-auto w-full justify-between rounded-sm border border-border px-3 py-3 text-left text-xs hover:border-primary/50" onClick={() => onNode(node.id)}>{node.label}<ArrowUpRight className="!size-3.5 text-primary"/></Button>)}</div></div>;
 }
 

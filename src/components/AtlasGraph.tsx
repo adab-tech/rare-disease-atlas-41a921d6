@@ -22,7 +22,9 @@ export function AtlasGraph({ selectedNode, selectedEdge, onNode, onEdge, focusCl
     const graphNodes: Point[] = nodes.map((node, index) => ({ id: node.id, cluster: node.cluster, type: node.type, x: (node.cluster === 'clearance' ? -225 : 225) + Math.cos(index * 2.399) * 85, y: Math.sin(index * 2.399) * 120 }));
     const simulation = forceSimulation(graphNodes)
       .force('link', forceLink<Point, {source:string;target:string}>(edges.map(edge => ({ source: edge.source, target: edge.target }))).id(d => d.id).distance(link => {
-        const source = link.source as Point; const target = link.target as Point;
+        const source = typeof link.source === 'string' ? graphNodes.find(n => n.id === link.source) : link.source;
+        const target = typeof link.target === 'string' ? graphNodes.find(n => n.id === link.target) : link.target;
+        if (!source || !target) return 70;
         return source.type === 'mechanism' || target.type === 'mechanism' ? 94 : 67;
       }).strength(.38))
       .force('charge', forceManyBody<Point>().strength(-75))

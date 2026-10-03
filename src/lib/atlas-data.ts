@@ -1,7 +1,7 @@
 export type NodeType = 'disease' | 'gene' | 'variant' | 'mechanism' | 'phenotype' | 'trial' | 'organization' | 'asset' | 'researcher';
 export type Cluster = 'clearance' | 'channel';
-export type AtlasNode = { id: string; label: string; type: NodeType; cluster: Cluster; subtitle: string; description: string; aliases?: string[]; source?: string; url?: string };
-export type AtlasEdge = { id: string; source: string; target: string; relation: string; explanation: string; confidence: number; status: 'Observed' | 'Inferred'; sourceRef: string; sourceUrl?: string; caveat?: string };
+export type AtlasNode = { id: string; label: string; type: NodeType; cluster: Cluster; subtitle: string; description: string; aliases?: string[]; source?: string | undefined; url?: string | undefined };
+export type AtlasEdge = { id: string; source: string; target: string; relation: string; explanation: string; confidence: number; status: 'Observed' | 'Inferred'; sourceRef: string; sourceUrl?: string | undefined; caveat?: string | undefined };
 
 const n = (id: string, label: string, type: NodeType, cluster: Cluster, subtitle: string, description: string, aliases: string[] = [], source?: string, url?: string): AtlasNode => ({ id, label, type, cluster, subtitle, description, aliases, source, url });
 export const nodes: AtlasNode[] = [
@@ -118,3 +118,5 @@ export function searchNodes(query: string) {
     return match ? { node, matched: match, score: normalize(match) === q ? 0 : normalize(match).startsWith(q) ? 1 : 2 } : null;
   }).filter((item): item is {node: AtlasNode; matched: string; score: number} => item !== null).sort((a,b) => a.score - b.score || a.node.label.localeCompare(b.node.label)).slice(0,8);
 }
+
+export function getNode(id: string): AtlasNode { const node = nodeById[id]; if (!node) throw new Error(`Unknown atlas node: ${id}`); return node; }
