@@ -32,3 +32,37 @@ export const gaps = [
   { n: 3, title: 'Structured querying → zero-friction clinical intake', from: 'Queries assume the user already knows the disease or identifier.', to: 'Constellation pulls HPO terms from pasted notes or discharge summaries, locally in the browser, and ranks overlapping clusters.' },
   { n: 4, title: 'Flat identifier exports → multi-stakeholder action dossiers', from: 'Results export as CSV tables of identifiers.', to: 'Constellation produces a 12-section IRB/grant briefing with hypotheses, investigators, studies, conflicts and citations.' },
 ];
+
+export type AuditSource = { name: string; links: { label: string; url: string }[]; baseline: string; opportunity: string; status: 'Prototype' | 'Planned' };
+export type AuditLayer = { number: string; title: string; focus: string; sources: AuditSource[] };
+
+// The 14 entries below count paired resources (PubMed/PMC and bioRxiv/medRxiv) as one source family each.
+// Opportunities describe product directions, not validated capabilities or current data integrations.
+export const sourceAudit: AuditLayer[] = [
+  { number: '01', title: 'Biology & ontologies', focus: 'From descriptive records to testable connections', sources: [
+    { name: 'OMIM', links: [{ label: 'OMIM', url: 'https://www.omim.org/' }], baseline: 'Narrative disease and phenotype descriptions.', opportunity: 'Translate documented gene–disease relationships into a computable causal graph, with provenance and uncertainty.', status: 'Prototype' },
+    { name: 'MONDO', links: [{ label: 'MONDO', url: 'https://mondo.monarchinitiative.org/' }], baseline: 'Disease taxonomy and cross-ontology mappings.', opportunity: 'Use mapped disease identities and hierarchy to compare shared pathways; taxonomy alone does not establish mechanistic homology.', status: 'Planned' },
+    { name: 'HPO', links: [{ label: 'HPO', url: 'https://hpo.jax.org/' }], baseline: 'Curated phenotype terms often require structured manual entry.', opportunity: 'Extract a limited set of HPO-coded findings from pasted notes locally; clinical-grade EHR extraction requires validation.', status: 'Prototype' },
+    { name: 'ClinVar', links: [{ label: 'ClinVar', url: 'https://www.ncbi.nlm.nih.gov/clinvar/' }], baseline: 'Variant submissions may disagree on pathogenicity or remain VUS.', opportunity: 'Surface submission-level discordance and evidence provenance in a contradiction radar, rather than collapsing disagreements into one claim.', status: 'Planned' },
+  ] },
+  { number: '02', title: 'Research & preclinical', focus: 'From scattered publications and assets to collaborators', sources: [
+    { name: 'PubMed / PMC', links: [{ label: 'PubMed', url: 'https://pubmed.ncbi.nlm.nih.gov/' }, { label: 'PMC', url: 'https://pmc.ncbi.nlm.nih.gov/' }], baseline: 'Papers and full-text evidence are dispersed across disease-specific searches.', opportunity: 'Link cited claims across diseases to investigators and shared mechanisms; verify authorship before suggesting collaborators.', status: 'Planned' },
+    { name: 'NIH RePORTER', links: [{ label: 'NIH RePORTER', url: 'https://reporter.nih.gov/' }], baseline: 'Awards and investigators are searchable but separate from the disease graph.', opportunity: 'Connect live awardees to cross-disease research questions; an award is not proof of availability or collaboration.', status: 'Prototype' },
+    { name: 'bioRxiv / medRxiv', links: [{ label: 'bioRxiv', url: 'https://www.biorxiv.org/' }, { label: 'medRxiv', url: 'https://www.medrxiv.org/' }], baseline: 'Preprints arrive before peer review and may change.', opportunity: 'Weight inferred claims by evidence maturity and provenance using a calibrated Bayesian model; not implemented or validated yet.', status: 'Planned' },
+    { name: 'Jackson Laboratory / JAX', links: [{ label: 'JAX', url: 'https://www.jax.org/' }], baseline: 'Animal models are catalogued separately from clinical evidence.', opportunity: 'Link model availability and genotype to disease mechanisms as reusable research assets, with validation of model relevance.', status: 'Planned' },
+  ] },
+  { number: '03', title: 'Advocacy & trials', focus: 'From regional directories to equitable study planning', sources: [
+    { name: 'Orphanet', links: [{ label: 'Orphanet', url: 'https://www.orpha.net/' }], baseline: 'Rare disease identifiers and resources span national contexts.', opportunity: 'Harmonize disease identities and link verified regional resources to federated organization nodes.', status: 'Planned' },
+    { name: 'NORD', links: [{ label: 'NORD', url: 'https://rarediseases.org/' }], baseline: 'US-focused patient communities and resources are separate from trial records.', opportunity: 'Connect verified community and registry listings to relevant disease pathways.', status: 'Planned' },
+    { name: 'EURORDIS', links: [{ label: 'EURORDIS', url: 'https://www.eurordis.org/' }], baseline: 'European patient voices sit in a distinct regional network.', opportunity: 'Represent regional advocacy links without treating membership as endorsement or a live registry.', status: 'Planned' },
+    { name: 'Global Genes', links: [{ label: 'Global Genes', url: 'https://globalgenes.org/' }], baseline: 'Community resources are not natively joined to mechanistic evidence.', opportunity: 'Federate verified organization connections across diseases and research assets.', status: 'Planned' },
+    { name: 'Rare Disease UK', links: [{ label: 'Rare Disease UK', url: 'https://www.raredisease.org.uk/' }], baseline: 'UK advocacy and policy resources are region-specific.', opportunity: 'Add jurisdiction-aware organization nodes and preserve regional context.', status: 'Planned' },
+    { name: 'ClinicalTrials.gov', links: [{ label: 'ClinicalTrials.gov', url: 'https://clinicaltrials.gov/' }], baseline: 'Registered studies and site locations are searchable but do not establish global access.', opportunity: 'Extend live study-site lookup with independently validated international feasibility and equity measures.', status: 'Prototype' },
+  ] },
+];
+
+export const scalingPhases = [
+  { phase: '01', period: 'Hackathon & pilot', status: 'Prototype in preview', summary: 'Two illustrative clusters—lysosomal disorders and epileptic encephalopathies—with an interactive graph, limited local HPO intake, demo contradiction radar and dossier export. Public deployment, clinical validation and production evidence feeds are not complete.' },
+  { phase: '02', period: 'Months 1–6', status: 'Proposed', summary: 'Build audited ETL with provenance, deduplication and refresh checks for NIH RePORTER, PubMed E-Utilities, Orphanet SPARQL where available, and permitted Bright Data collection; open a foundation portal. Access and licensing remain to be assessed.' },
+  { phase: '03', period: 'Months 6–18', status: 'Proposed', summary: 'Explore SMART on FHIR integration and decentralized trial matching, conditional on clinical validation, privacy review, security, governance, consent and regulatory assessment. No clinical decision support is currently offered.' },
+];
