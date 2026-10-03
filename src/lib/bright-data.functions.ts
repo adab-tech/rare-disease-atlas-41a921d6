@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 
-type RecordItem = { title: string; detail: string; url: string; source: string; mode: 'live' | 'fallback' };
+type RecordItem = { title: string; detail: string; url: string; source: string; mode: 'live' | 'official' | 'fallback' };
 export type Enrichment = { query: string; registries: RecordItem[]; trials: RecordItem[]; awardees: RecordItem[]; fetchedAt: string; notice: string };
 const TERMS = ['Niemann-Pick type C', 'Gaucher disease', 'Fabry disease', 'Dravet syndrome', 'SCN2A', 'SCN8A', 'KCNQ2'] as const;
 const registrySources: Record<string, { name: string; url: string }> = {
@@ -13,7 +13,7 @@ const registrySources: Record<string, { name: string; url: string }> = {
 const safeText = (s: unknown, length = 140) => typeof s === 'string' ? s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, length) : '';
 const safeURL = (url: string, origin: string) => { try { const u = new URL(url, origin); return u.protocol === 'https:' && u.hostname === new URL(origin).hostname ? u.href : ''; } catch { return ''; } };
 async function throughBrightData(url: string, key: string, zone: string): Promise<string> {
-  const response = await fetch('https://api.brightdata.com/request', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ zone, url, format: 'raw' }) });
+  const response = await fetch('https://api.brightdata.com/request', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ zone, url, format: 'raw' }), signal: AbortSignal.timeout(12000) });
   if (!response.ok) throw new Error(`Bright Data returned ${response.status}`);
   const text = await response.text();
   if (!text || /Residential Failed|bad_endpoint|robots.txt|Access Denied/i.test(text.slice(0, 800))) throw new Error('Source unavailable through Bright Data');
@@ -42,7 +42,7 @@ export const getEnrichment = createServerFn({ method: 'POST' })
     const [registries, trials, awardees] = await Promise.all([
       (async () => {
         if (!key || !source) return fallbackRegistry;
-        try { const html = await throughBrightData(source.url, key, zone); return registryLinks(html, source.url, source.name).length ? registryLinks(html, source.url, source.name) : fallbackRegistry; }
+        try { const html = await throughBrightData(source.url, key, zone); const links = registryLinks(html, source.url, source.name); return links.length ? links : fallbackRegistry; }
         catch { return fallbackRegistry; }
       })(),
       (async (): Promise<RecordItem[]> => {
@@ -50,9 +50,9 @@ export const getEnrichment = createServerFn({ method: 'POST' })
         const url = `https://clinicaltrials.gov/api/v2/studies?${params}`;
         try {
           let text = '';
-          let mode: 'live' | 'fallback' = 'live';
-          if (key) { try { text = await throughBrightData(url, key, zone); JSON.parse(text); } catch { text = ''; mode = 'fallback'; } }
-          if (!text) { const response = await fetch(url); if (!response.ok) throw new Error('Trials feed unavailable'); text = await response.text(); mode = 'fallback'; }
+          let mode: 'live' | 'official' = 'live';
+          if (key) { try { text = await throughBrightData(url, key, zone); JSON.parse(text); } catch { text = ''; mode = 'official'; } }
+          if (!text) { const response = await fetch(url, { signal: AbortSignal.timeout(12000) }); if (!response.ok) throw new Error('Trials feed unavailable'); text = await response.text(); mode = 'official'; }
           const payload = JSON.parse(text) as { studies?: Array<{ protocolSection?: { identificationModule?: { nctId?: string; briefTitle?: string }; statusModule?: { overallStatus?: string }; contactsLocationsModule?: { locations?: Array<{ facility?: string; city?: string; country?: string }> } } }> };
           return (payload.studies ?? []).flatMap(study => { const p = study.protocolSection; const id = p?.identificationModule?.nctId; if (!id || !/^NCT\d{8}$/.test(id)) return []; const sites = p?.contactsLocationsModule?.locations?.slice(0,2).map(l => [l.facility,l.city,l.country].filter(Boolean).join(', ')).join(' · ') || 'Sites not listed in this record'; return [{ title: safeText(p?.identificationModule?.briefTitle) || id, detail: `${id} · ${safeText(p?.statusModule?.overallStatus)} · ${safeText(sites, 180)}`, url: `https://clinicaltrials.gov/study/${id}`, source: 'ClinicalTrials.gov', mode }]; });
         } catch { return []; }
@@ -60,10 +60,10 @@ export const getEnrichment = createServerFn({ method: 'POST' })
       (async (): Promise<RecordItem[]> => {
         // NIH RePORTER is a POST-only API; Bright Data's page request is GET-only, so query its official API directly.
         try {
-          const response = await fetch('https://api.reporter.nih.gov/v2/projects/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ criteria: { advanced_text_search: { operator: 'and', search_field: 'all', search_text: term } }, offset: 0, limit: 5 }) });
+          const response = await fetch('https://api.reporter.nih.gov/v2/projects/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ criteria: { advanced_text_search: { operator: 'and', search_field: 'all', search_text: term } }, offset: 0, limit: 5 }), signal: AbortSignal.timeout(12000) });
           if (!response.ok) throw new Error('NIH feed unavailable');
           const payload = await response.json() as { results?: Array<{ appl_id?: number; project_title?: string; project_num?: string; fiscal_year?: number; organization?: { org_name?: string }; principal_investigators?: Array<{ full_name?: string }> }> };
-          return (payload.results ?? []).flatMap(item => item.appl_id ? [{ title: safeText(item.project_title), detail: `${safeText(item.principal_investigators?.map(p => p.full_name).filter(Boolean).join(', ') || 'Investigator not listed')} · ${safeText(item.organization?.org_name)} · FY${item.fiscal_year ?? '—'}`, url: `https://reporter.nih.gov/project-details/${item.appl_id}`, source: 'NIH RePORTER', mode: 'fallback' as const }] : []);
+          return (payload.results ?? []).flatMap(item => item.appl_id ? [{ title: safeText(item.project_title), detail: `${safeText(item.principal_investigators?.map(p => p.full_name).filter(Boolean).join(', ') || 'Investigator not listed')} · ${safeText(item.organization?.org_name)} · FY${item.fiscal_year ?? '—'}`, url: `https://reporter.nih.gov/project-details/${item.appl_id}`, source: 'NIH RePORTER', mode: 'official' as const }] : []);
         } catch { return []; }
       })(),
     ]);
